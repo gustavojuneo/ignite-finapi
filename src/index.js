@@ -5,12 +5,12 @@ const app = express();
 
 app.use(express.json());
 
-const costumers = [];
+const customers = [];
 
 // Middleware
 function verifyIfExistsAccountCPF(request, response, next) {
   const { cpf } = request.headers;
-  const customer = costumers.find(customer => customer.cpf === cpf);
+  const customer = customers.find(customer => customer.cpf === cpf);
 
   if (!customer) {
     return response.status(400).json({ error: 'Customer not found!' });
@@ -34,7 +34,7 @@ function getBalance(statement) {
 app.post('/account', (request, response) => {
   const { cpf, name } = request.body;
 
-  const customerAlreadyExists = costumers.some(
+  const customerAlreadyExists = customers.some(
     customer => customer.cpf === cpf,
   );
 
@@ -50,7 +50,7 @@ app.post('/account', (request, response) => {
     statement: [],
   };
 
-  costumers.push(account);
+  customers.push(account);
 
   return response.status(201).send();
 });
@@ -98,5 +98,44 @@ app.post('/withdraw', verifyIfExistsAccountCPF, (request, response) => {
 
   return response.status(201).send();
 });
+
+app.get('/statement/date', verifyIfExistsAccountCPF, (request, response) => {
+  const { customer } = request;
+  const { date } = request.query;
+
+  const dateFormat = new Date(date + ' 00:00');
+
+  const statement = customer.statement.filter(
+    statement =>
+      statement.created_at.toDateString() ===
+      new Date(dateFormat).toDateString(),
+  );
+
+  return response.json(statement);
+});
+
+app.put('/account', verifyIfExistsAccountCPF, (request, response) => {
+  const { name } = request.body;
+  const { customer } = request;
+
+  customer.name = name;
+  return response.status(201).send();
+});
+
+app.get('/account', verifyIfExistsAccountCPF, (request, response) => {
+  const { customer } = request;
+
+  return response.json(customer);
+});
+
+app.delete('/account', verifyIfExistsAccountCPF, (request, response) => {
+  const { customer } = request;
+
+  customers.splice(customers.indexOf(customer), 1);
+
+  return response.status(200).json(customers);
+});
+
+app.get('/balance');
 
 app.listen(3333);
